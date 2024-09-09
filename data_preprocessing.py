@@ -33,7 +33,7 @@ def fix_signal_length(file_list):
     for i in range(len(file_list)):
 
         record = wfdb.rdrecord(file_list[i]).__dict__
-        signal = record['p_signal'].flatten()
+        signal = record['p_signal'].flatten() # signals are stored as (N,1) arrays; flatten them to 1d
         sig_len = record['sig_len']
         
         if sig_len < 18000:
@@ -59,7 +59,7 @@ def make_HDF5(data_array, file_list):
             key = wfdb.rdrecord(file_list[i]).__dict__['record_name']
             f.create_dataset(key, data=data_array[i, :])
 
-def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='mexh'):
+def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='cmor2.5-1.0'):
     '''
     This function imports the HDF5 data file and iterates through each signal by key. Eah signal is
     cleaned using neurokit's nk.ecg_clean() function with 'neurokit' as the default method. The cleaned
@@ -72,9 +72,10 @@ def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='mexh'):
         sampling_times = np.linspace(0.0, 60.0, 18000)
         clean_signal = nk.ecg_clean(raw_signal, sampling_rate, method)
 
-        scales = np.linspace(0.5, 150, num=250) # choosing wavelet frequencies between 0.5 Hz to 150 Hz
+        scales = np.linspace(10, 750, num=150) # choosing wavelet frequencies between 0.5 Hz to 150 Hz
         sampling_period = np.diff(sampling_times).mean()
 
+        # continuous wavelet transform
         coeff_mat, freqs = pywt.cwt(
             clean_signal,
             scales=scales,
@@ -85,17 +86,21 @@ def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='mexh'):
         coeff_mat = np.abs(coeff_mat)
         fig, ax = plt.subplots(figsize=(2.90, 2.91))
 
-        pcm = ax.pcolormesh(sampling_times, freqs, coeff_mat, cmap='plasma')
+        pcm = ax.pcolormesh(sampling_times, freqs, coeff_mat, cmap='jet')
         ax.set_yscale('log')
         ax.axis('off')
 
-        plt.savefig('./signal_cwt_images/' + key + '.png', pad_inches=0.0, bbox_inches='tight') # images saved in new directory
+        plt.savefig('./signal_cwt_images_training/' + key + '.png', dpi=100, bbox_inches='tight', pad_inches=0.0) # images saved in new directory
         plt.close(fig)
 
 if __name__ == '__main__':
-    #file_list = sorted(glob.glob('./data/*.mat'))
-    #file_list = [os.path.splitext(x)[0] for x in file_list]
+    file_list = sorted(glob.glob('./data/*.mat'))
+    file_list = [os.path.splitext(x)[0] for x in file_list]
 
+    ''' 
+    The signals are set to a fixed length (padding and trunctation), stored in a 2d array and converted into an
+    HDF5 file for convenience.
+    '''
     #data_array = fix_signal_length(file_list)
     #make_HDF5(data_array, file_list)
 
@@ -108,7 +113,7 @@ if __name__ == '__main__':
 
         t1 = time.time()
 
-        Parallel(n_jobs=4)(delayed(signal_CWT)(key) for key in tqdm(keys)) # joblib's parallelized for loop
+        Parallel(n_jobs=8)(delayed(signal_CWT)(key) for key in tqdm(keys)) # joblib's parallelized for loop
 
         t2 = time.time()
         print('Time taken for execution: ' + str(t2-t1) + ' seconds')
