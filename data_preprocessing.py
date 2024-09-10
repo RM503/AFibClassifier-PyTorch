@@ -63,7 +63,7 @@ def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='cmor2.5-1.0')
     '''
     This function imports the HDF5 data file and iterates through each signal by key. Eah signal is
     cleaned using neurokit's nk.ecg_clean() function with 'neurokit' as the default method. The cleaned
-    signal is then pass through pywt continuous wavelet transform function with the mexican hat wavelet
+    signal is then pass through pywt continuous wavelet transform function with the complex Morlet wavelet
     used as default. The scalogram plots for each signal are saved in a separate directory as .png images
     which are represented by 224 x 224 x 3 matrices.
     '''
@@ -72,6 +72,9 @@ def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='cmor2.5-1.0')
         sampling_times = np.linspace(0.0, 60.0, 18000)
         clean_signal = nk.ecg_clean(raw_signal, sampling_rate, method)
 
+        ''' 
+        Use f = scale2frequency(wavelet, scale)/sampling_period to check frequencies corresponding to the chosen scales
+        '''
         scales = np.linspace(10, 750, num=150) # choosing wavelet frequencies between 0.5 Hz to 150 Hz
         sampling_period = np.diff(sampling_times).mean()
 
