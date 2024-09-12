@@ -45,7 +45,9 @@ A list of preprocessing steps precede the CNN training of the dataset. These fun
 The first preprocessing step involves fixing the length of all signals to a uniform $18000$-sized array. Signals smaller than these are padded with extra zeros while those that are larger are chopped. Then, purely out of convenience, the uniform length signal arrays are stored in an ```HDF5``` file along with keys containing ```record_name```.
 
 Now, the most important preprocessing step is converting these $1d$ time-series data to $2d$ representations that can be processed by CNNs. This is done using *continuous wavelet transforms* (CWT). A CWT takes in a time-dependent function $f(t)$ and performs the following integral transform
-$$ \left[ W_\psi f \right](a,b)=\frac{1}{\sqrt{a}}\int_{-\infty}^\infty dt\:f(t)\overline{\psi\left( \frac{t-b}{a} \right)} $$
+```math
+\left[ W_\psi f \right](a,b)=\frac{1}{\sqrt{a}}\int_{-\infty}^\infty dt\:f(t)\overline{\psi\left( \frac{t-b}{a} \right)}
+```
 where $\psi$ is an *integration kernel* that is slid over the signal by displacements $b$ and scales $a$. Before applying a CWT, the signals are first cleaned to remove artifacts and noise. This is done using the ```neurokit2``` library which has a lot of functionality related to processing physiological time-series data processing. This library has a built-in function called ```ecg_process()``` which can perform suitable filtering and QRS segmentation. Below is an image of a regular cardiac cycle with the QRS complexes isolated and stacked - 
 
 <img src='./notebooks/images/qrs1.png' width=600 height=450>
