@@ -1,5 +1,5 @@
 ''' 
-Dataset class and other helper functions
+This module contains the custom PyTorch dataset class along with other helper functions.
 '''
 
 import os
@@ -19,6 +19,9 @@ plt.rc('xtick',labelsize=12)
 plt.rc('ytick',labelsize=12)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+training_img_dir = './signal_cwt_images_training/' # image directory
+label_list = pd.read_csv(training_img_dir + 'REFERENCE.csv', index_col=[0]) # annotations file
 
 def pixel_stats(annotations_file, img_dir):
     ''' 
@@ -67,8 +70,8 @@ class ScalogramDataset(Dataset):
     def __getitem__(self, idx):
         img_name = self.img_labels.iloc[idx, 0] + '.png'
         img_path = os.path.join(self.img_dir, img_name)
-        image = read_image(img_path)[0:3, :, :].float()
-        label = self.img_labels.iloc[idx, 2]
+        image = read_image(img_path)[0:3, :, :].float() # by default, the image tensors are uint8; these are converted to floats
+        label = self.img_labels.iloc[idx, 2] # the third column contains the encoded diagnoses
 
         if self.transform:
             image = self.transform(image)
@@ -79,11 +82,11 @@ class ScalogramDataset(Dataset):
         return image, label 
 
 @torch.no_grad()
-def get_confusion_matrix(validation_dataset, validation_loader, model, plot=False):
+def get_confusion_matrix(idx_test, validation_loader, model, plot=False):
     '''
-    Inputs - the validation/test dataset, dataloader and the instantiated NN model
-
-    Returns the confusion matrix of the predicted and true class labels
+    This function takes in as arguments a list/array of indicies of the test/validation data, the test/validation dataloader
+    and the trained NN model and returns the confusion matrix as a 4 x 4 array. Optionally, if plot=True, the function 
+    returns a heatmap plot of the confusion matrix.
     '''
 
     all_preds = torch.Tensor([])
@@ -98,16 +101,39 @@ def get_confusion_matrix(validation_dataset, validation_loader, model, plot=Fals
     Converting the PyTorch tensors into numpy arrays
     '''
     all_preds = torch.max(all_preds, dim=1).indices.numpy()
-    all_labels = torch.Tensor(validation_dataset.targets).numpy()
+    all_labels = label_list.iloc[idx_test, 2].to_numpy()
     
     CM =  confusion_matrix(all_labels, all_preds)
 
     if plot is False:
         return CM 
     else:
-        class_labels = [
-        
-    ]
+        class_labels = ['AFib', 'Normal', 'Other', 'Noise']
 
-    sns.heatmap(CM, annot=True, fmt='.3g', xticklabels=class_labels, yticklabels=class_labels)
+    sns.heatmap(CM, annot=True, fmt='.3g', xticklabels=class_labels, yticklabels=class_labels, cmap='Blues')
+    plt.xlabel(r'predicted labels', fontsize=15)
+    plt.ylabel(r'true labels', fontsize=15)
     plt.show()
+
+def F1_score(CM, class_label):
+    '''
+    This function returns the F1 score associated with a particular class label.
+    0 - AFib, 1 - Normal, 2 - Other, 3 - Noise
+    '''
+    keys = {
+        'AFib'   : 0,
+        'Normal' : 1,
+        'Other'  : 2,
+        'Noise'  : 3
+    }
+    key = keys[class_label]
+    ''' 
+    The F1 score is calculate as the harmonic mean of precision and recall
+
+    F1 = 2/(1/precision + 1/recall) = 2*precision*recall / (precision + recall)
+    '''
+    precision = CM[key, key] / CM[:, key].sum()
+    recall = CM[key, key] / CM[key, :].sum()
+    F1_score = 2*precision*recall / (precision + recall) # F1 score associated with particular key
+
+    return F1_score 
