@@ -59,7 +59,27 @@ def make_HDF5(data_array, file_list):
             key = wfdb.rdrecord(file_list[i]).__dict__['record_name']
             f.create_dataset(key, data=data_array[i, :])
 
-def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='cmor2.5-1.0'):
+def RandomScalogramGenerator(label_list, data_array, type):
+    ''' 
+    This function randomly generates scalogram of a chosen type of cardiac rhythm
+    Type: 0 - Afib, 1 - Normal, 2 - Other, 3 - Noise
+    '''
+    label_subset = label_list[
+        label_list['label']==type
+    ].index.to_list()
+    random_idx = np.random.choice(label_subset, size=1).item()
+    raw_signal = data_array[random_idx, :]
+    sampling_times = np.linspace(0.0, 60.0, 18000)
+
+    coeff_mat, freq = signal_CWT(raw_signal)
+    
+    fig, ax = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+    ax[0].plot(sampling_times, raw_signal)
+    pcm = ax[1].pcolormesh(sampling_times, freq, coeff_mat, cmap='jet')
+    ax[1].set_yscale('log')
+    plt.show()
+
+def signal_CWT(key, sampling_rate=300, method='hamilton2002', wavelet='cmor2.5-1.0'):
     '''
     This function imports the HDF5 data file and iterates through each signal by key. Eah signal is
     cleaned using neurokit's nk.ecg_clean() function with 'neurokit' as the default method. The cleaned
@@ -93,7 +113,7 @@ def signal_CWT(key, sampling_rate=300, method='neurokit', wavelet='cmor2.5-1.0')
         ax.set_yscale('log')
         ax.axis('off')
 
-        plt.savefig('./signal_cwt_images_training/' + key + '.png', dpi=100, bbox_inches='tight', pad_inches=0.0) # images saved in new directory
+        plt.savefig('./signal_cwt_images_training/hamilton_filter/' + key + '.png', dpi=100, bbox_inches='tight', pad_inches=0.0) # images saved in new directory
         plt.close(fig)
 
 if __name__ == '__main__':

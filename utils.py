@@ -137,3 +137,31 @@ def F1_score(CM, class_label):
     F1_score = 2*precision*recall / (precision + recall) # F1 score associated with particular key
 
     return F1_score 
+
+def prediction_stats(CM):
+    ''' 
+    This function uses the confusion matrix and produces the precision, recall and F1 scores of each category.
+    The scores are then returned as a dataframe for better readability.
+    '''
+    keys = {
+        'AFib'   : 0,
+        'Normal' : 1,
+        'Other'  : 2,
+        'Noise'  : 3
+    }
+    precision_list = []
+    recall_list = []
+    F1_list = []
+
+    for key, val in keys.items():
+        precision = CM[val, val] / CM[val, :].sum()
+        precision_list.append(precision)
+        recall = CM[val, val] / CM[:, val].sum()
+        recall_list.append(recall)
+        f1 = 2*precision*recall / (precision + recall)
+        F1_list.append(f1)
+
+    stats_dict = {'Precision' : precision_list, 'Recall': recall_list, 'F1_score': F1_list}
+    stats_df = pd.DataFrame.from_dict(stats_dict, orient='index', columns=['AFib', 'Normal', 'Other', 'Noise'])
+
+    return stats_df 

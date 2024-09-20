@@ -35,7 +35,7 @@ def fit_one_cycle(num_epochs, max_lr, model, train_dl, valid_dl, loss_fn, opt_fu
     '''
 
     # instantiate optimizer with appropriate weight_decay
-    optimizer = opt_fun(model.parameters(), max_lr, weight_decay=weight_decay)
+    optimizer = opt_fun(model.parameters(), max_lr, weight_decay=weight_decay, momentum=0.9)
     # setting up one-cycle learning rate scheduler
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer,
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     
     parser.add_argument('num_epochs', type=int, help='Number of epochs of training')
     parser.add_argument('-n1', '--batch_size', type=int, default=64,  help='Batch size for PyTorch DataLoader')
-    parser.add_argument('-n2', '--max_lr', type=float, default=0.01, help='Maximum learning rate for scheduler')
+    parser.add_argument('-n2', '--max_lr', type=float, default=0.001, help='Maximum learning rate for scheduler')
     parser.add_argument('-n3', '--weight_decay', type=float, default=0.0001, help='Weight decay for regularization')
 
     args = parser.parse_args()
@@ -164,8 +164,8 @@ if __name__ == '__main__':
     to create training and validation datasets on which transformations are applied before being passed onto the dataloader.
     '''
 
-    training_img_dir = './signal_cwt_images_training/' # image directory
-    label_list = pd.read_csv(training_img_dir + 'REFERENCE.csv', index_col=[0]) # annotations file
+    training_img_dir = './signal_cwt_images_training/hamilton_filter/' # image directory
+    label_list = pd.read_csv('./signal_cwt_images_training/REFERENCE.csv', index_col=[0]) # annotations file
 
     idx = np.arange(0, len(label_list)) # list of indices
     idx_train, idx_test = train_test_split(
@@ -215,15 +215,15 @@ if __name__ == '__main__':
     print(f'Size of the train set {len(train_ds)}.')
     print(f'Size of the test dataset is {len(valid_ds)}.')
 
-    train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    valid_dl = DataLoader(valid_ds, batch_size=batch_size, shuffle=False)
+    train_dl = DataLoader(train_ds, batch_size=batch_size, num_workers=2, shuffle=True)
+    valid_dl = DataLoader(valid_ds, batch_size=batch_size, num_workers=2, shuffle=False)
 
     model = AlexNet().to(device)
 
     #num_epochs = 150
     #max_lr = 0.001
     #weight_decay = 0.0001
-    opt_fun = torch.optim.Adam
+    opt_fun = torch.optim.SGD
 
     loss_fn = nn.CrossEntropyLoss()
 
