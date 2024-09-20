@@ -46,7 +46,7 @@ The first preprocessing step involves fixing the length of all signals to a unif
 
 Now, the most important preprocessing step is converting these $1d$ time-series data to $2d$ representations that can be processed by CNNs. This is done using *continuous wavelet transforms* (CWT). A CWT takes in a time-dependent function $f(t)$ and performs the following integral transform
 ```math
-\left[ W_\psi f \right](a,b)=\frac{1}{\sqrt{a}}\int_{-\infty}^\infty dt\:f(t)\overline{\psi\left( \frac{t-b}{a} \right)}
+\left[ W_\psi f \right](a,b)=\frac{1}{\sqrt{a}}\int_{-\infty}^\infty dt\:f(t)\overline{\psi}\left( \frac{t-b}{a} \right)
 ```
 where $\psi$ is an *integration kernel* that is slid over the signal by displacements $b$ and scales $a$. Before applying a CWT, the signals are first cleaned to remove artifacts and noise. This is done using the ```neurokit2``` library which has a lot of functionality related to processing physiological time-series data processing. This library has a built-in function called ```ecg_process()``` which can perform suitable filtering and QRS segmentation (here the ```hamilton2002``` filter us used). Below is an image of a regular cardiac cycle with the QRS complexes isolated and stacked - 
 
@@ -94,7 +94,7 @@ Over $150$ epochs of training and validation using AlexNet, the following loss a
 
 <img src='./results/hamilton_filter/history_alexnet.png'>
 
-All three optimizers display similar performance, with the validation accuracy plateauing to $\sim81\%$. We observe a lot of variation in the validation loss and accuracy plots epoch-to-epoch possibly as a consequence of the class imbalance inherent in the dataset. For a better measure of performance, we turn our attention to the confusion matrix obtained for the SGD optimizer
+All three optimizers display similar performance, with the validation accuracy plateauing to $\sim81$ percent. We observe a lot of variation in the validation loss and accuracy plots epoch-to-epoch possibly as a consequence of the class imbalance inherent in the dataset. For a better measure of performance, we turn our attention to the confusion matrix obtained for the SGD optimizer
 
 <img src='./results/hamilton_filter/CM_sgd_optim_alexnet_batchsize64.png' width=600 height=450>
 
