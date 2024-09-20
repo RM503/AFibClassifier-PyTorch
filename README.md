@@ -45,13 +45,17 @@ A list of preprocessing steps precede the CNN training of the dataset. These fun
 The first preprocessing step involves fixing the length of all signals to a uniform $18000$-sized array. Signals smaller than these are padded with extra zeros while those that are larger are chopped. Then, purely out of convenience, the uniform length signal arrays are stored in an ```HDF5``` file along with keys containing ```record_name```.
 
 Now, the most important preprocessing step is converting these $1d$ time-series data to $2d$ representations that can be processed by CNNs. This is done using *continuous wavelet transforms* (CWT). A CWT takes in a time-dependent function $f(t)$ and performs the following integral transform
-$$ \left[ W_\psi f \right](a,b)=\frac{1}{\sqrt{a}}\int_{-\infty}^\infty dt\:f(t)\overline{\psi\left( \frac{t-b}{a} \right)} $$
+```math
+\left[ W_\psi f \right](a,b)=\frac{1}{\sqrt{a}}\int_{-\infty}^\infty dt\:f(t)\overline{\psi\left( \frac{t-b}{a} \right)}
+```
 where $\psi$ is an *integration kernel* that is slid over the signal by displacements $b$ and scales $a$. Before applying a CWT, the signals are first cleaned to remove artifacts and noise. This is done using the ```neurokit2``` library which has a lot of functionality related to processing physiological time-series data processing. This library has a built-in function called ```ecg_process()``` which can perform suitable filtering and QRS segmentation (here the ```hamilton2002``` filter us used). Below is an image of a regular cardiac cycle with the QRS complexes isolated and stacked - 
 
 <img src='./notebooks/images/qrs1.png' width=600 height=450>
 
 The CWTs are then performed on the cleaned signals. The ```pywt``` library contains the ```cwt``` function perform can perform the transformations. For the kernel $\psi(t)$, we use the complex Morlet wavelet
-$$ \psi(t)=\frac{1}{\sqrt{\pi B}}e^{-t^2/B}e^{2\pi i C t} $$
+```math
+\psi(t)=\frac{1}{\sqrt{\pi B}}e^{-t^2/B}e^{2\pi i C t}
+```
 where $B$ is the bandwidth and $C$ is the center frequency. The ```signal_CWT()``` function in the ```data_preprocessing.py``` module performs the transformations on all the signals, saving them as $(224\times224)$ squared-pixel images. The CWTs of the previously shown ECG signal examples are shown below
 
 <img src='./notebooks/images/ecg_cwt.png' width=600 height=450>
@@ -69,11 +73,17 @@ All in all, the AlexNet architecture has approximately $60$ million learnable pa
 The CNN was trained on three different batch sizes $\mathcal{B}=16,32$ and $64$. A custom PyTorch dataset class ```ScalogramDataset()``` can be found in the ```utils.py``` module on which image transformations are performed before dataloaders are created. Since the training dataset has not train/validation split, we create one by randomly selecting train and test indices from ```REFERENCE.csv```, passing the indices to the dataset class.
 
 During data augmentation, a major transformation is *normalization* where each pixel in each channel is transformed via
-$$ \widetilde{\rm{pixel}}_{\rm{R,G,B}} = \frac{\rm{pixel}_{\rm{R,G,B}} - \mu_{\rm{R,G,B}}}{\sigma_{\rm{R,G,B}}} $$
+```math
+\widetilde{\rm{pixel}}_{\rm{R,G,B}} = \frac{\rm{pixel}_{\rm{R,G,B}} - \mu_{\rm{R,G,B}}}{\sigma_{\rm{R,G,B}}}
+```
 where $\mu_{\rm{R,G,B}}$ and $\sigma_{\rm{R,G,B}}$ are the means and standard deviations of the pixels in the R, G, B channels. This can be calculated through the ```pixel_stats()``` function in ```utils.py```. This yields
-$$ \mu_{\rm{R,G,B}}=\left[ 5.06, 18.04, 160.67 \right] $$
+```math
+\mu_{\rm{R,G,B}}=\left[ 5.06, 18.04, 160.67 \right]
+```
 and, 
-$$ \sigma_{\rm{R,G,B}}=\left[ 30.72, 54.80, 54.35 \right] $$
+```math
+\sigma_{\rm{R,G,B}}=\left[ 30.72, 54.80, 54.35 \right]
+```
 The large value of $\mu_{\rm{B}}$ is unsurprising due to the color map chosen to represent the scalograms.
 
 The model is trained over $150$ epochs where the training and validation histories (losses and accuracies) are recorded. Optimization was performed using the Adam and Stochastic Gradient Descent (SGD) optimizesr while cross-entropy was used for calculating the loss function. Furthermore, a learning rate scheduler was used to optimize the learning rate and a weight decay of $10^{-4}$ for regularization.
@@ -89,10 +99,13 @@ All three optimizers display similar performance, with the validation accuracy p
 <img src='./results/hamilton_filter/CM_sgd_optim_alexnet_batchsize64.png' width=600 height=450>
 
 Using the confusion matrix, the $F_1$ scores can be calculated as follows
-
-$$ F_{1,i}=\frac{2}{\text{Precision}^{-1}_i + \text{Recall}^{-1}_i },\;\;\;\; i=\{ \text{`AFib', `Normal', `Other', `Noise'}  \} $$
+```math
+F_{1,i}=\frac{2}{\text{Precision}^{-1}_i + \text{Recall}^{-1}_i },\;\;\;\; i=\{ \text{`AFib', `Normal', `Other', `Noise'}  \}
+```
 and
-$$ F_{1,\text{avg}}=\frac{1}{4}\sum_{i\in\text{class}}F_{1,i} $$
+```math
+F_{1,\text{avg}}=\frac{1}{4}\sum_{i\in\text{class}}F_{1,i}
+```
 The precisions, recalls and $F_1$ scores of each category are given below
 |                 | **AFib** | **Normal** | **Other** | **Noise** |
 |-----------------|----------|------------|-----------|-----------|
@@ -100,8 +113,9 @@ The precisions, recalls and $F_1$ scores of each category are given below
 | **Recall**      | $0.738$  | $0.852$    | $0.779$   | $0.590$   |
 | **$F_1$ score** | $0.686$  | $0.881$    | $0.718$   | $0.681$   |
 such that the weighted average $F_1$ score is
-$$ F_{1,\text{avg}}\approx 0.741 $$
-
+```math
+F_{1,\text{avg}}\approx 0.741 
+```
 ## Continuation
 
 The repository is far from complete and more results will be incorporated over time with the aim of improving the accuracy and $F_1$ scores. Apart from the class imbalance, underperformance can arise from subpar filtering of the raw signals. The raw ECG signals were cleaned using the default filter in ```hamilton2002``` and different algorithms may have different efficacies at segmenting QRS complexes. Further, other neural networks, such as those with residual blocks, have not been studied.
