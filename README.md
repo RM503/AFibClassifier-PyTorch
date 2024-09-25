@@ -112,6 +112,7 @@ The precisions, recalls and $F_1$ scores of each category are given below
 | **Precision**   | $0.641$  | $0.913$    | $0.667$   | $0.807$   |
 | **Recall**      | $0.738$  | $0.852$    | $0.779$   | $0.590$   |
 | **$F_1$ score** | $0.686$  | $0.881$    | $0.718$   | $0.681$   |
+
 such that the weighted average $F_1$ score is
 ```math
 F_{1,\text{avg}}\approx 0.741 
