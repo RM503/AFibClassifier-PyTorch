@@ -15,6 +15,7 @@ from tqdm import tqdm
 from utils import pixel_stats, ScalogramDataset
 from models import AlexNet # imports the AlexNet NN class 
 import argparse
+from typing import List, Tuple
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -22,16 +23,28 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
     
-def fit_one_cycle(num_epochs, max_lr, model, train_dl, valid_dl, loss_fn, opt_fun, weight_decay=0):
+def fit_one_cycle(
+        num_epochs: int,
+        max_lr: float,
+        model: nn.Module, 
+        train_dl: torch.utils.data.DataLoader, 
+        valid_dl: torch.utils.data.DataLoader, 
+        loss_fn: torch.nn.modules.loss, 
+        opt_fun: torch.optim.optimizer, 
+        weight_decay: int=0
+    ) -> Tuple[List[float], List[float], List[float], List[float]]:
     '''
-    Defining one complete cycle of training and validation over the specified number of epochs
-    The function takes in the following parameters
-    (1) number of epochs - num_epochs
-    (2) maximum learning rate - max_lr
-    (3) neural network model
-    (4) training and validation/test dataloaders
-    (5) regularization in terms of weigh decay (default set to 0)
+    This function performs one complete cycle of training and validation over the specified number of epochs
+    
+    Args: (i) num_epochs - number of training epochs
+          (ii) max_lr - maximum learning rate (to be used by scheduler)
+          (iii) model - neural network model
+          (iv) train_dl, valid_dl - training and validation/test dataloaders
+          (v) loss_fn - loss function
+          (vi) opt_fun - optimization function
+          (vii) weight_decay - L2 regularization
 
+    Returns: Training and validation losses and accuracies
     '''
 
     # instantiate optimizer with appropriate weight_decay

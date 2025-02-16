@@ -9,6 +9,7 @@ from torch.utils.data import Dataset
 import torchvision.transforms as transforms 
 from torchvision.io import read_image 
 import pandas as pd
+from typing import Tuple
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns 
@@ -23,10 +24,15 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 training_img_dir = './signal_cwt_images_training/' # image directory
 label_list = pd.read_csv(training_img_dir + 'REFERENCE.csv', index_col=[0]) # annotations file
 
-def pixel_stats(annotations_file, img_dir):
+def pixel_stats(annotations_file: pd.DataFrame, img_dir: str) -> Tuple[float, float]:
     ''' 
     This function calculates the mean and standard deviation of the pixels across the R, G and B color channels.
     It returns the mean and standard deviation as torch.tensor() objects.
+
+    Args: (i) annotations_file - pandas dataframe containing a list of ECG data labels
+          (ii) img_dir - directory where spectrogram images are stored
+
+    Returns: pixel statistics in terms of mean and standard deviation
     '''
     img_labels = annotations_file.iloc[:,0] # dataframe converted into a series object here
 
@@ -58,7 +64,14 @@ class ScalogramDataset(Dataset):
     In this form, the annotations_file is represented as a directory reference to the REFERENCE.csv file. The split index argument refers to
     the particular train/test split inside the image directory.
     '''
-    def __init__(self, annotations_file, img_dir, split_index, transform=None, target_transform=None):
+    def __init__(
+            self, 
+            annotations_file: pd.DataFrame,
+            img_dir: str, 
+            split_index: int, 
+            transform: transforms.Compose=None,
+            target_transform: transforms.Compose=None
+        ):
         self.img_labels = pd.read_csv(annotations_file, index_col=[0]).iloc[split_index, :]
         self.img_dir = img_dir 
         self.transform = transform
@@ -67,7 +80,7 @@ class ScalogramDataset(Dataset):
     def __len__(self):
         return len(self.img_labels)
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         img_name = self.img_labels.iloc[idx, 0] + '.png'
         img_path = os.path.join(self.img_dir, img_name)
         image = read_image(img_path)[0:3, :, :].float() # by default, the image tensors are uint8; these are converted to floats
@@ -82,7 +95,12 @@ class ScalogramDataset(Dataset):
         return image, label 
 
 @torch.no_grad()
-def get_confusion_matrix(idx_test, validation_loader, model, plot=False):
+def get_confusion_matrix(
+        idx_test: int, 
+        validation_loader: torch.utils.data.DataLoader, 
+        model, 
+        plot: bool=False
+    ) -> np.ndarray:
     '''
     This function takes in as arguments a list/array of indicies of the test/validation data, the test/validation dataloader
     and the trained NN model and returns the confusion matrix as a 4 x 4 array. Optionally, if plot=True, the function 
@@ -115,7 +133,7 @@ def get_confusion_matrix(idx_test, validation_loader, model, plot=False):
     plt.ylabel(r'true labels', fontsize=15)
     plt.show()
 
-def F1_score(CM, class_label):
+def F1_score(CM: np.ndarray, class_label: str) -> float:
     '''
     This function returns the F1 score associated with a particular class label.
     0 - AFib, 1 - Normal, 2 - Other, 3 - Noise
@@ -138,7 +156,7 @@ def F1_score(CM, class_label):
 
     return F1_score 
 
-def prediction_stats(CM):
+def prediction_stats(CM: np.ndarray) -> pd.DataFrame:
     ''' 
     This function uses the confusion matrix and produces the precision, recall and F1 scores of each category.
     The scores are then returned as a dataframe for better readability.

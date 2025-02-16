@@ -6,6 +6,7 @@ This Python script preprocesses the ECG data by
 '''
 
 import numpy as np
+import pandas as pd
 import h5py 
 import wfdb 
 import os 
@@ -16,8 +17,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import time 
 from joblib import Parallel, delayed
+from typing import List
 
-def fix_signal_length(file_list):
+def fix_signal_length(file_list: List[str]) -> np.array:
     '''
     This function fixes the lengths of the ECG data. The maximum recording length is slightly longer tha 60s, which at a sampling rate of 300 Hz, gives a signal length
     of over 18,200. Readings that are given by arrays of length less than 18,000 are padded with zeros to the right. 
@@ -27,6 +29,9 @@ def fix_signal_length(file_list):
 
     There are a few entries which slightly exceed 60s (hence, have more than 18,000 data points). Such entries have been restricted to array size of
     18,000.
+
+    Args: file_list - list of file directories
+    Returns: data_array - Numpy array containing ECG values
     '''
     data_array = np.zeros((len(file_list), 18000)) # all the different signals are stored along the rows
 
@@ -49,9 +54,13 @@ def fix_signal_length(file_list):
 
     return data_array 
 
-def make_HDF5(data_array, file_list):
+def make_HDF5(data_array: np.array, file_list: List[str]) -> None:
     ''' 
     This function takes the signal array and the file list and packs them into an HDF5 file.
+
+    Args: (i) data_array - Numpy array containing ECG values
+          (ii) file_list - list of file directories
+    Returns: None
     '''
 
     with h5py.File('./data/data.h5', 'w') as f:
@@ -59,10 +68,15 @@ def make_HDF5(data_array, file_list):
             key = wfdb.rdrecord(file_list[i]).__dict__['record_name']
             f.create_dataset(key, data=data_array[i, :])
 
-def RandomScalogramGenerator(label_list, data_array, type):
+def RandomScalogramGenerator(label_list: pd.DataFrame | pd.Series, data_array: np.array, type: int) -> None:
     ''' 
     This function randomly generates scalogram of a chosen type of cardiac rhythm
     Type: 0 - Afib, 1 - Normal, 2 - Other, 3 - Noise
+
+    Args: (i) label_list - list of encoded ECG labels as Pandas DataFrame or Series
+          (ii) data_array - Numpy array containing the ECG values
+          (iii) type - Type of ECG sample to be generated
+    Returns: None
     '''
     label_subset = label_list[
         label_list['label']==type
@@ -79,13 +93,19 @@ def RandomScalogramGenerator(label_list, data_array, type):
     ax[1].set_yscale('log')
     plt.show()
 
-def signal_CWT(key, sampling_rate=300, method='hamilton2002', wavelet='cmor2.5-1.0'):
+def signal_CWT(key: str, sampling_rate: int=300, method: str='hamilton2002', wavelet: str='cmor2.5-1.0') -> None:
     '''
-    This function imports the HDF5 data file and iterates through each signal by key. Eah signal is
+    This function imports the HDF5 data file and iterates through each signal by key. Each signal is
     cleaned using neurokit's nk.ecg_clean() function with 'neurokit' as the default method. The cleaned
-    signal is then pass through pywt continuous wavelet transform function with the complex Morlet wavelet
+    signal is then passed through pywt continuous wavelet transform function with the complex Morlet wavelet
     used as default. The scalogram plots for each signal are saved in a separate directory as .png images
     which are represented by 224 x 224 x 3 matrices.
+
+    Args: (i) key - HdF5 key identifying each ECG data file
+          (ii) sampling_rate - number of samples per second of the signal; defaults to 300 Hz
+          (iii) method - QRS complex segmentation algorithm; defaults to `hamilton2002`
+          (iv) wavelet - wavelet transform kernel; defaults to `cmor2.5-1.0`
+    Returns: None
     '''
     with h5py.File('./data/data.h5', 'r') as f:
         raw_signal = np.array(f[key])
